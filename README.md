@@ -11,7 +11,7 @@ Add to `Cargo.toml`:
 ```toml
 [dependencies]
 
-pjlink = "0.1.0"
+pjlink = "0.1.1"
 ```
 
 Create a PjlinkDevice and start sending DMX data to a universe.
@@ -27,6 +27,14 @@ match device.send_command("POWR ?") {
     Err(err) => println!("An error occurred: {}", err),
 }
 
+```
+
+### Examples
+
+In the examples folder we have some sample programs that can be run using the folloing command from the project directory.
+
+```
+cargo run --example power_status -- 192.168.1.1 password
 ```
 
 ## License
