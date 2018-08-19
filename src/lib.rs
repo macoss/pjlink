@@ -24,7 +24,7 @@ static PORT: &'static str = "4352";
 
 // Return the correct error message based on the PJ Link specification
 fn pjlink_error(error_msg: &str) -> Error {
-    match &error_msg[7..11] {
+    match &error_msg[0..4] {
         "ERR1" => Error::new(ErrorKind::InvalidData, format!("Undefined command")),
         "ERR2" => Error::new(ErrorKind::InvalidData, format!("Invalid parameter")),
         "ERR3" => Error::new(ErrorKind::InvalidData, format!("Unavaiable at this time")),
@@ -32,6 +32,71 @@ fn pjlink_error(error_msg: &str) -> Error {
         "ERRA" => Error::new(ErrorKind::PermissionDenied, format!("Authorization Error")),
         _ => Error::new(ErrorKind::InvalidData, format!("Error reported from the projector {}", error_msg)),
     }
+}
+
+// Parse the response from the device
+fn parse_response(response: &str) -> Result<PjlinkResponse, Error> {
+    let mut equals_sign: usize = 0;
+    let len = response.len();
+
+    //lets find the equals sign
+    for (i, c) in response.chars().enumerate() {
+        if c == '=' || c == ' ' {
+            equals_sign = i;
+            break;
+        }
+    }
+    
+    let command = if &response[0..1] != "%" {
+        CommandType::PJLINK
+    } else {
+        match &response[2..equals_sign] {
+            "POWR" => CommandType::Power,
+            "INPT" => CommandType::Input,
+            "AVMT" => CommandType::AvMute,
+            "ERST" => CommandType::ErrorStatus,
+            "LAMP" => CommandType::Lamp,
+            "INST" => CommandType::InputList,
+            "NAME" => CommandType::Name,
+            "INF1" => CommandType::Info1,
+            "INF2" => CommandType::Info2,
+            "INFO" => CommandType::Information,
+            "CLSS" => CommandType::Class,
+            _ => return Err(Error::new(ErrorKind::InvalidInput, "Invalid command type returned.")),
+        }
+    };
+
+    let value = &response[equals_sign+1..len];
+
+    // Did we get and error report and if so lets return it so the functions don't have check for errors.
+    if &value[0..3] == "ERR" {
+        return Err(pjlink_error(value));
+    }
+
+    Ok(
+        PjlinkResponse{
+            action: command,
+            value: value.to_string(),
+        }
+    )
+
+}
+
+// This is the list of standard command/response types from the PJLink spec. 
+// At this point I would think that this would only be used internally.
+enum CommandType {
+    PJLINK,
+    Power,
+    Input,
+    AvMute,
+    ErrorStatus,
+    Lamp,
+    InputList,
+    Name,
+    Info1,
+    Info2,
+    Information,
+    Class,
 }
 
 /// Power status definitions
@@ -42,8 +107,12 @@ pub enum PowerStatus {
     Warmup,
 }
 
+struct PjlinkResponse {
+    action: CommandType,
+    value: String,
+}
+
 pub struct PjlinkDevice {
-    
     host: String,
     password: String,
     managed: bool, // Currently not implemented but will add monitoring support with call backs with the status changes
@@ -51,7 +120,7 @@ pub struct PjlinkDevice {
 
 impl PjlinkDevice {
     /// Constructs a new PjlinkDevice.
-    pub fn new(host: &str) -> Result<PjlinkDevice,Box<Error>> {
+    pub fn new(host: &str) -> Result<PjlinkDevice, Box<Error>> {
         let pwd = String::from("");
         PjlinkDevice::new_with_password(host, &pwd)
     }
@@ -72,7 +141,7 @@ impl PjlinkDevice {
         let mut stream = try!(TcpStream::connect(host_port));
 
         let _ = stream.read(&mut client_buffer); //Did we get the hello string?
-
+        
         let cmd: String = match client_buffer[7] as char { // Does the connection require auth or not
             AUTH => { // Connection requires auth
                 let rnd_num = String::from_utf8_lossy(&client_buffer[9..17]).to_string();
@@ -106,21 +175,34 @@ impl PjlinkDevice {
         Ok(response)
     }
 
+    // a wrapper around send_command that will parse the response
+    fn send(&self, cmd: &str) -> Result<PjlinkResponse, Error> {
+        match self.send_command(cmd) {
+            Ok(send_result) => {
+                match parse_response(&send_result) {
+                    Ok(parse_result) => Ok(parse_result),
+                    Err(e) => Err(e),
+                }
+            },
+            Err(e) => Err(e),
+        }
+    }
+
     /// Check the power status of the device and returns an enum 
     pub fn get_power_status(&self) -> Result<PowerStatus, Error> {
-        match self.send_command("POWR ?") {
+        match self.send("POWR ?") {
             Ok(result) => {
-                if &result[2..6] == "POWR" {
-                    match &result[7..8] {
-                        "0" => Ok(PowerStatus::Off),
-                        "1" => Ok(PowerStatus::On),
-                        "2" => Ok(PowerStatus::Cooling),
-                        "3" => Ok(PowerStatus::Warmup),
-                        "E" => Err(pjlink_error(&result)),
-                        _ => Err(Error::new(ErrorKind::InvalidInput, format!("Invalid Response: {}", result))), // Invalid Response
-                    }
-                } else {
-                    Err(Error::new(ErrorKind::InvalidInput, format!("Got a response we didn't expect: {}", result)))
+                match result.action {
+                    CommandType::Power => {
+                        match &result.value[0..1] {
+                            "0" => Ok(PowerStatus::Off),
+                            "1" => Ok(PowerStatus::On),
+                            "2" => Ok(PowerStatus::Cooling),
+                            "3" => Ok(PowerStatus::Warmup),
+                            _ => Err(Error::new(ErrorKind::InvalidInput, format!("Invalid Response: {}", result.value))), // Invalid Response
+                        }
+                    } 
+                _ => Err(Error::new(ErrorKind::InvalidInput, format!("Got a response we didn't expect: {}", result.value)))
                 }
             },
             Err(e) => Err(e),
@@ -129,21 +211,21 @@ impl PjlinkDevice {
 
     /// Turn on the device
     pub fn power_on(&self) -> Result<PowerStatus, Error> {
-        match self.send_command("POWR 1") {
+        match self.send("POWR 1") {
             Ok(result) => {
-                if &result[2..6] == "POWR" {
-                    match &result[7..9] {
-                        "OK" => {
-                            match self.get_power_status() {
-                                Ok(status) => Ok(status),
-                                Err(e) => Err(e),
-                            }
-                        },
-                        "ER" => Err(pjlink_error(&result)),
-                        _ => Err(Error::new(ErrorKind::InvalidInput, format!("Invalid Response: {}", result))), // Invalid Response
-                    }
-                } else {
-                    Err(Error::new(ErrorKind::InvalidInput, format!("Got a response we didn't expect: {}", result)))
+                match result.action {
+                    CommandType::Power => {
+                        match &result.value[0..2] {
+                            "OK" => {
+                                match self.get_power_status() {
+                                    Ok(status) => Ok(status),
+                                    Err(e) => Err(e),
+                                }
+                            },
+                            _ => Err(Error::new(ErrorKind::InvalidInput, format!("Invalid Response: {}", result.value))), // Invalid Response
+                        }
+                    },
+                    _ =>Err(Error::new(ErrorKind::InvalidInput, format!("Got a response we didn't expect: {}", result.value)))
                 }
             },
             Err(e) => Err(e),            
@@ -152,21 +234,22 @@ impl PjlinkDevice {
 
     /// Turn off the device
     pub fn power_off(&self) -> Result<PowerStatus, Error> {
-        match self.send_command("POWR 0") {
+        match self.send("POWR 0") {
             Ok(result) => {
-                if &result[2..6] == "POWR" {
-                    match &result[7..9] {
-                        "OK" => {
-                            match self.get_power_status() {
-                                Ok(status) => Ok(status),
-                                Err(e) => Err(e),
-                            }
-                        },
-                        "ER" => Err(pjlink_error(&result)),
-                        _ => Err(Error::new(ErrorKind::InvalidInput, format!("Invalid Response: {}", result))), // Invalid Response
-                    }
-                } else {
-                    Err(Error::new(ErrorKind::InvalidInput, format!("Got a response we didn't expect: {}", result)))
+                match result.action {
+                    CommandType::Power => {
+                        match &result.value[0..2] {
+                            "OK" => {
+                                match self.get_power_status() {
+                                    Ok(status) => Ok(status),
+                                    Err(e) => Err(e),
+                                }
+                            },
+                            _ => Err(Error::new(ErrorKind::InvalidInput, format!("Invalid Response: {}", result.value))), // Invalid Response
+                        }
+                    
+                    },   
+                    _ => Err(Error::new(ErrorKind::InvalidInput, format!("Got a response we didn't expect: {}", result.value)))
                 }
             },
             Err(e) => Err(e),            
