@@ -57,8 +57,8 @@ fn parse_response(response: &str) -> Result<PjlinkResponse, Error> {
             "LAMP" => CommandType::Lamp,
             "INST" => CommandType::InputList,
             "NAME" => CommandType::Name,
-            "INF1" => CommandType::Info1,
-            "INF2" => CommandType::Info2,
+            "INF1" => CommandType::Manufacturer,
+            "INF2" => CommandType::ProductName,
             "INFO" => CommandType::Information,
             "CLSS" => CommandType::Class,
             _ => return Err(Error::new(ErrorKind::InvalidInput, "Invalid command type returned.")),
@@ -73,7 +73,7 @@ fn parse_response(response: &str) -> Result<PjlinkResponse, Error> {
             return Err(pjlink_error(value));
         }
     }
-    
+
     Ok(
         PjlinkResponse{
             action: command,
@@ -94,8 +94,8 @@ enum CommandType {
     Lamp,
     InputList,
     Name,
-    Info1,
-    Info2,
+    Manufacturer,
+    ProductName,
     Information,
     Class,
 }
@@ -254,6 +254,51 @@ impl PjlinkDevice {
                 }
             },
             Err(e) => Err(e),            
+        }
+    }
+
+    /// Get the information (INFO ?) from the 
+    pub fn get_info(&self) -> Result<String, Error> {
+        match self.send("INFO ?") {
+            Ok(result) => {
+                match result.action {
+                    CommandType::Information => {
+                        Ok(result.value)
+                    },
+                    _ => Err(Error::new(ErrorKind::InvalidInput, format!("Invalid Response:: {}", result.value))),
+                }
+            },
+            Err(e) => Err(e),  
+        }
+    }
+
+    /// Get the manufacturer (INF1 ?) from the device
+    pub fn get_manufacturer(&self) -> Result<String, Error> {
+        match self.send("INF1 ?") {
+            Ok(result) => {
+                match result.action {
+                    CommandType::Manufacturer => {
+                        Ok(result.value)
+                    },
+                    _ => Err(Error::new(ErrorKind::InvalidInput, format!("Invalid Response:: {}", result.value))),
+                }
+            },
+            Err(e) => Err(e),  
+        }
+    }
+
+       /// Get the product name (INF2 ?) from the device
+    pub fn get_product_name (&self) -> Result<String, Error> {
+        match self.send("INF2 ?") {
+            Ok(result) => {
+                match result.action {
+                    CommandType::ProductName => {
+                        Ok(result.value)
+                    },
+                    _ => Err(Error::new(ErrorKind::InvalidInput, format!("Invalid Response:: {}", result.value))),
+                }
+            },
+            Err(e) => Err(e),  
         }
     }
 }
