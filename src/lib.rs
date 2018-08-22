@@ -38,7 +38,6 @@ fn pjlink_error(error_msg: &str) -> Error {
 fn parse_response(response: &str) -> Result<PjlinkResponse, Error> {
     let mut equals_sign: usize = 0;
     let len = response.len();
-
     //lets find the equals sign
     for (i, c) in response.chars().enumerate() {
         if c == '=' || c == ' ' {
@@ -69,10 +68,12 @@ fn parse_response(response: &str) -> Result<PjlinkResponse, Error> {
     let value = &response[equals_sign+1..len];
 
     // Did we get and error report and if so lets return it so the functions don't have check for errors.
-    if &value[0..3] == "ERR" {
-        return Err(pjlink_error(value));
+    if len == 3 {
+        if &value[0..3] == "ERR" {
+            return Err(pjlink_error(value));
+        }
     }
-
+    
     Ok(
         PjlinkResponse{
             action: command,
