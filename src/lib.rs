@@ -287,12 +287,41 @@ impl PjlinkDevice {
         }
     }
 
-       /// Get the product name (INF2 ?) from the device
-    pub fn get_product_name (&self) -> Result<String, Error> {
+    /// Get the product name (INF2 ?) from the device
+    pub fn get_product_name(&self) -> Result<String, Error> {
         match self.send("INF2 ?") {
             Ok(result) => {
                 match result.action {
                     CommandType::ProductName => {
+                        Ok(result.value)
+                    },
+                    _ => Err(Error::new(ErrorKind::InvalidInput, format!("Invalid Response:: {}", result.value))),
+                }
+            },
+            Err(e) => Err(e),  
+        }
+    }
+    /// Get the product class (CLSS ?) from the device
+    pub fn get_class(&self) -> Result<String, Error> {
+        match self.send("CLSS ?") {
+            Ok(result) => {
+                match result.action {
+                    CommandType::Class => {
+                        Ok(result.value)
+                    },
+                    _ => Err(Error::new(ErrorKind::InvalidInput, format!("Invalid Response:: {}", result.value))),
+                }
+            },
+            Err(e) => Err(e),  
+        }
+    }
+    
+    /// Get the device name (NAME ?) from the device
+    pub fn get_device_name(&self) -> Result<String, Error> {
+        match self.send("NAME ?") {
+            Ok(result) => {
+                match result.action {
+                    CommandType::Name => {
                         Ok(result.value)
                     },
                     _ => Err(Error::new(ErrorKind::InvalidInput, format!("Invalid Response:: {}", result.value))),

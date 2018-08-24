@@ -38,6 +38,11 @@ fn main() {
         PjlinkDevice::new(&host).unwrap()
     };
 
+    match device.get_device_name() {
+        Ok(response) => println!("{} Device Name: {}", host, response),
+        Err(err) => println!("An error occurred: {}", err),
+    }
+
     match device.get_manufacturer() {
         Ok(response) => println!("{} Manufacturer: {}", host, response),
         Err(err) => println!("An error occurred: {}", err),
@@ -53,4 +58,8 @@ fn main() {
         Err(err) => println!("An error occurred: {}", err),
     }
 
+    match device.get_class() {
+        Ok(response) => println!("{} Class: {}", host, response),
+        Err(err) => println!("An error occurred: {}", err),
+    }
 }
