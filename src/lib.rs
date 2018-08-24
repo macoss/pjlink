@@ -108,6 +108,14 @@ pub enum PowerStatus {
     Warmup,
 }
 
+pub enum InputType {
+    RGB(u8),
+    Video(u8),
+    Digital(u8),
+    Storage(u8),
+    Network(u8),
+}
+
 struct PjlinkResponse {
     action: CommandType,
     value: String,
@@ -121,13 +129,13 @@ pub struct PjlinkDevice {
 
 impl PjlinkDevice {
     /// Constructs a new PjlinkDevice.
-    pub fn new(host: &str) -> Result<PjlinkDevice, Box<Error>> {
+    pub fn new(host: &str) -> Result<PjlinkDevice, Error> {
         let pwd = String::from("");
         PjlinkDevice::new_with_password(host, &pwd)
     }
 
     /// Contructs a new PjlinkDevice that has a password
-    pub fn new_with_password(host: &str, password: &str) -> Result<PjlinkDevice,Box<Error>> {
+    pub fn new_with_password(host: &str, password: &str) -> Result<PjlinkDevice, Error> {
         Ok(PjlinkDevice {
             host: host.to_string(),
             password: String::from(password),
@@ -172,7 +180,7 @@ impl PjlinkDevice {
             Err(e) => return Err(e), 
         };
 
-        let response = String::from_utf8_lossy(&client_buffer[0..len]).to_string();   
+        let response = String::from_utf8_lossy(&client_buffer[0..len-1]).to_string();   
         Ok(response)
     }
 
@@ -328,6 +336,24 @@ impl PjlinkDevice {
                 }
             },
             Err(e) => Err(e),  
+        }
+    }
+
+    /// Get the current input (INPT ?) from the device
+    pub fn get_input(&self) -> Result<InputType, Error> {
+        match self.send("INPT ?") {
+            Ok(result) => {
+                let input = result.value.parse::<u8>().unwrap();
+                match input {
+                    11...19 => Ok(InputType::RGB(input - 10)),
+                    21...29 => Ok(InputType::Video(input - 20)),
+                    31...39 => Ok(InputType::Digital(input - 30)),
+                    41...49 => Ok(InputType::Storage(input - 40)),
+                    51...59 => Ok(InputType::Network(input - 50)),
+                    _ => Err(Error::new(ErrorKind::InvalidInput, format!("Invalid input:: {}", input))),
+                }
+            },
+            Err(e) => Err(e),
         }
     }
 }
