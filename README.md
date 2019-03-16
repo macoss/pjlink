@@ -22,8 +22,13 @@ use pjlink::PjlinkDevice;
 
 let mut device = PjlinkDevice::new("192.168.1.1").unwrap();
 
-match device.send_command("POWR ?") {
-    Ok(response) => println!("{}", response),
+match device.power_status {
+    Ok(response) => match response {
+        PowerStatus::Off => println!("Device is off"),
+        PowerStatus::On => println!("Device is on"),
+        PowerStatus::Cooling => println!("Device is cooling"),
+        PowerStatus::Warmup => println!("Device is warming up"),
+    },
     Err(err) => println!("An error occurred: {}", err),
 }
 
