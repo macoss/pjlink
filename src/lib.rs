@@ -128,6 +128,11 @@ pub enum InputType {
     Network(u8),
 }
 
+pub struct AvMute {
+    pub audio: bool,
+    pub video: bool,
+}
+
 struct PjlinkResponse {
     action: CommandType,
     value: String,
@@ -461,6 +466,44 @@ impl PjlinkDevice {
                     _ => Err(Error::new(
                         ErrorKind::InvalidInput,
                         format!("Got a response we didn't expect: {}", result.value),
+                    )),
+                }
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Get the current Av Mute (AVMT ?) from the device
+    /// Returns a Result enum with an Ok type of [pjlink::AvMute](struct.AvMute.html) example would be:
+    /// ```
+    /// pjlink::AvMute::Audio or Video //with Audio or Video being a bool with the status.
+    ///
+    /// ```
+    ///
+    pub fn get_avmute(&self) -> Result<AvMute, Error> {
+        match self.send("AVMT ?") {
+            Ok(result) => {
+                let status = result.value.parse::<u8>().unwrap();
+                match status {
+                    11 => Ok(AvMute {
+                        audio: false,
+                        video: true,
+                    }),
+                    21 => Ok(AvMute {
+                        audio: true,
+                        video: false,
+                    }),
+                    31 => Ok(AvMute {
+                        audio: true,
+                        video: true,
+                    }),
+                    30 => Ok(AvMute {
+                        audio: false,
+                        video: false,
+                    }),
+                    _ => Err(Error::new(
+                        ErrorKind::InvalidInput,
+                        format!("Invalid result:: {}", status),
                     )),
                 }
             }

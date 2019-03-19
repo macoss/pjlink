@@ -14,11 +14,10 @@
 
 extern crate pjlink;
 
-use pjlink::{PjlinkDevice};
-use std::{env};
+use pjlink::{InputType, PjlinkDevice, PowerStatus};
+use std::env;
 
 fn main() {
-
     let host = match env::args().nth(1) {
         Some(hst) => hst,
         None => {
@@ -29,7 +28,7 @@ fn main() {
 
     let password = match env::args().nth(2) {
         Some(pwd) => pwd,
-        None => String::from("")
+        None => String::from(""),
     };
 
     let device: PjlinkDevice = if password != "" {
@@ -60,6 +59,41 @@ fn main() {
 
     match device.get_class() {
         Ok(response) => println!("{} Class: {}", host, response),
+        Err(err) => println!("An error occurred: {}", err),
+    }
+
+    match device.get_power_status() {
+        Ok(response) => match response {
+            PowerStatus::Off => println!("{} Power: off", host),
+            PowerStatus::On => println!("{} Power: on", host),
+            PowerStatus::Cooling => println!("{} Power: cooling", host),
+            PowerStatus::Warmup => println!("{} Power: warming up", host),
+        },
+        Err(err) => println!("An error occurred: {}", err),
+    }
+
+    match device.get_input() {
+        Ok(input) => match input {
+            InputType::RGB(input_number) => println!("{} Input: RGB {}", host, input_number),
+            InputType::Video(input_number) => println!("{} Input: Video {}", host, input_number),
+            InputType::Digital(input_number) => {
+                println!("{} Input: Digital {}", host, input_number)
+            }
+            InputType::Storage(input_number) => {
+                println!("{} Input: Storage {}", host, input_number)
+            }
+            InputType::Network(input_number) => {
+                println!("{} Input: Network {}", host, input_number)
+            }
+        },
+        Err(err) => println!("An error occurred: {}", err),
+    }
+
+    match device.get_avmute() {
+        Ok(response) => println!(
+            "{} Video Mute: {} Audio Mute: {}",
+            host, response.video, response.audio
+        ),
         Err(err) => println!("An error occurred: {}", err),
     }
 }
