@@ -510,4 +510,65 @@ impl PjlinkDevice {
             Err(e) => Err(e),
         }
     }
+
+    /// Set the AV Mute (AVMT 30) on the current device
+    /// Returns a Result enum with an Ok type of [pjlink::AvMute](struct.AvMute.html) example would be:
+    /// ```
+    /// let mutes = AvMute {
+    ///     video: true,
+    ///     audio: true,
+    /// }
+    ///
+    /// match device.set_avmute(mutes) {
+    ///     Ok(mutes) => println!(
+    ///         "{} Video Mute: {} Audio Mute: {}",
+    ///         host, mutes.video, mutes.audio
+    ///     ),
+    ///     Err(err) => println!("An error occurred: {}", err),
+    /// }
+    ///
+    /// ```
+    ///
+    pub fn set_avmute(&self, mute_status: AvMute) -> Result<AvMute, Error> {
+        let mutes: u8 = match mute_status {
+            AvMute {
+                video: true,
+                audio: false,
+            } => 11,
+            AvMute {
+                video: false,
+                audio: true,
+            } => 21,
+            AvMute {
+                video: true,
+                audio: true,
+            } => 31,
+            _ => 30,
+        };
+
+        let command = format!("AVMT {}", mutes);
+        match self.send(&command) {
+            Ok(result) => {
+                match result.action {
+                    CommandType::AvMute => {
+                        match &result.value[0..2] {
+                            "OK" => match self.get_avmute() {
+                                Ok(status) => Ok(status),
+                                Err(e) => Err(e),
+                            },
+                            _ => Err(Error::new(
+                                ErrorKind::InvalidInput,
+                                format!("Invalid Response: {}", result.value),
+                            )), // Invalid Response
+                        }
+                    }
+                    _ => Err(Error::new(
+                        ErrorKind::InvalidInput,
+                        format!("Got a response we didn't expect: {}", result.value),
+                    )),
+                }
+            }
+            Err(e) => Err(e),
+        }
+    }
 }

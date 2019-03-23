@@ -39,27 +39,27 @@ fn main() {
 
     match device.get_device_name() {
         Ok(response) => println!("{} Device Name: {}", host, response),
-        Err(err) => println!("An error occurred: {}", err),
+        Err(err) => println!("{} Device: error occurred: {}", host, err),
     }
 
     match device.get_manufacturer() {
         Ok(response) => println!("{} Manufacturer: {}", host, response),
-        Err(err) => println!("An error occurred: {}", err),
+        Err(err) => println!("{} Manugacturer: error occurred: {}", host, err),
     }
 
     match device.get_product_name() {
         Ok(response) => println!("{} Product: {}", host, response),
-        Err(err) => println!("An error occurred: {}", err),
+        Err(err) => println!("{} Product: error occurred: {}", host, err),
     }
 
     match device.get_info() {
         Ok(response) => println!("{} Infomation: {}", host, response),
-        Err(err) => println!("An error occurred: {}", err),
+        Err(err) => println!("{} Info: error occurred: {}", host, err),
     }
 
     match device.get_class() {
         Ok(response) => println!("{} Class: {}", host, response),
-        Err(err) => println!("An error occurred: {}", err),
+        Err(err) => println!("{} Class: error occurred: {}", host, err),
     }
 
     match device.get_power_status() {
@@ -69,7 +69,7 @@ fn main() {
             PowerStatus::Cooling => println!("{} Power: cooling", host),
             PowerStatus::Warmup => println!("{} Power: warming up", host),
         },
-        Err(err) => println!("An error occurred: {}", err),
+        Err(err) => println!("{} Power: error occurred: {}", host, err),
     }
 
     match device.get_input() {
@@ -86,7 +86,7 @@ fn main() {
                 println!("{} Input: Network {}", host, input_number)
             }
         },
-        Err(err) => println!("An error occurred: {}", err),
+        Err(err) => println!("{} Input: error occurred: {}", host, err),
     }
 
     match device.get_avmute() {
@@ -94,6 +94,6 @@ fn main() {
             "{} Video Mute: {} Audio Mute: {}",
             host, response.video, response.audio
         ),
-        Err(err) => println!("An error occurred: {}", err),
+        Err(err) => println!("{} AvMute: error occurred: {}", host, err),
     }
 }
