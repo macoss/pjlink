@@ -3,9 +3,9 @@
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-
+//
 // http://www.apache.org/licenses/LICENSE-2.0
-
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -131,6 +131,11 @@ pub enum InputType {
 pub struct AvMute {
     pub audio: bool,
     pub video: bool,
+}
+
+pub struct Lamp {
+    pub hours: u16,
+    pub on: bool,
 }
 
 struct PjlinkResponse {
@@ -476,7 +481,7 @@ impl PjlinkDevice {
     /// Get the current Av Mute (AVMT ?) from the device
     /// Returns a Result enum with an Ok type of [pjlink::AvMute](struct.AvMute.html) example would be:
     /// ```
-    /// pjlink::AvMute::Audio or Video //with Audio or Video being a bool with the status.
+    /// pjlink::AvMute::Audio or Video //with Audio and Video being a bool with the status.
     ///
     /// ```
     ///
@@ -567,6 +572,37 @@ impl PjlinkDevice {
                         format!("Got a response we didn't expect: {}", result.value),
                     )),
                 }
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Get the current lamp status (LAMP ?) from the device
+    /// Returns a Result enum with an Ok vector of [pjlink::Lamp](struct.Lamp.html) example would be:
+    /// ```
+    /// pjlink::Lamp::hours and on  //with hours being the total hours on that lamp
+    /// and "on" being a bool with the status of the lamp.
+    ///
+    /// ```
+    ///
+    pub fn get_lamp(&self) -> Result<Vec<Lamp>, Error> {
+        match self.send("LAMP ?") {
+            Ok(result) => {
+                let mut status = result.value.split_whitespace();
+                let mut lamps = Vec::new();
+                while let Some(l) = status.next() {
+                    let hours = l.parse::<u16>().unwrap();
+
+                    let on = match status.next() {
+                        Some(x) => x == "1",
+                        None => false,
+                    };
+                    lamps.push(Lamp {
+                        hours: hours,
+                        on: on,
+                    });
+                }
+                Ok(lamps)
             }
             Err(e) => Err(e),
         }

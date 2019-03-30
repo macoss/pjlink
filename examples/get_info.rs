@@ -96,4 +96,18 @@ fn main() {
         ),
         Err(err) => println!("{} AvMute: error occurred: {}", host, err),
     }
+
+    match device.get_lamp() {
+        Ok(response) => {
+            let mut lamp_count = 1;
+            for lamp in response.iter() {
+                println!(
+                    "{} Lamp {}: Hours: {} On: {}",
+                    host, lamp_count, lamp.hours, lamp.on
+                );
+                lamp_count += 1;
+            }
+        }
+        Err(err) => println!("{} Lamp: error occurred: {}", host, err),
+    }
 }
