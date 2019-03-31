@@ -14,7 +14,7 @@
 
 extern crate pjlink;
 
-use pjlink::{InputType, PjlinkDevice, PowerStatus};
+use pjlink::{ErrorStatus, ErrorType, InputType, PjlinkDevice, PowerStatus};
 use std::env;
 
 fn main() {
@@ -109,5 +109,41 @@ fn main() {
             }
         }
         Err(err) => println!("{} Lamp: error occurred: {}", host, err),
+    }
+
+    match device.get_error_status() {
+        Ok(error_status) => {
+            match error_status.fan_error {
+                ErrorType::Warning => println!("{} Error Status: Fan Warning", host),
+                ErrorType::Error => println!("{} Error Status: Fan Error", host),
+                _ => (),
+            }
+            match error_status.lamp_error {
+                ErrorType::Warning => println!("{} Error Status: Lamp Warning", host),
+                ErrorType::Error => println!("{} Error Status: Lamp Error", host),
+                _ => (),
+            }
+            match error_status.temperature_error {
+                ErrorType::Warning => println!("{} Error Status: Temperature Warning", host),
+                ErrorType::Error => println!("{} Error Status: Temperature Error", host),
+                _ => (),
+            }
+            match error_status.cover_open_error {
+                ErrorType::Warning => println!("{} Error Status: Cover Open Warning", host),
+                ErrorType::Error => println!("{} Error Status: Cover Open Error", host),
+                _ => (),
+            }
+            match error_status.filter_error {
+                ErrorType::Warning => println!("{} Error Status: Filter Warning", host),
+                ErrorType::Error => println!("{} Error Status: Filter Error", host),
+                _ => (),
+            }
+            match error_status.other_error {
+                ErrorType::Warning => println!("{} Error Status: Other Warning", host),
+                ErrorType::Error => println!("{} Error Status: Other Error", host),
+                _ => (),
+            }
+        }
+        Err(err) => println!("{} Error Status: error occurred: {}", host, err),
     }
 }

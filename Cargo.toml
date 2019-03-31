@@ -1,6 +1,6 @@
 [package]
 name = "pjlink"
-version = "0.1.1"
+version = "0.2.0"
 description = "A PJLink library that can be used to commmicate over the network with PJLink enabled devices such as a projector or display"
 authors = ["Rick Russell <rick@rickrussell.org>"]
 repository = "https://github.com/macoss/pjlink"

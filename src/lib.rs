@@ -128,6 +128,12 @@ pub enum InputType {
     Network(u8),
 }
 
+pub enum ErrorType {
+    NoError,
+    Warning,
+    Error,
+}
+
 pub struct AvMute {
     pub audio: bool,
     pub video: bool,
@@ -136,6 +142,15 @@ pub struct AvMute {
 pub struct Lamp {
     pub hours: u16,
     pub on: bool,
+}
+
+pub struct ErrorStatus {
+    pub fan_error: ErrorType,
+    pub lamp_error: ErrorType,
+    pub temperature_error: ErrorType,
+    pub cover_open_error: ErrorType,
+    pub filter_error: ErrorType,
+    pub other_error: ErrorType,
 }
 
 struct PjlinkResponse {
@@ -603,6 +618,113 @@ impl PjlinkDevice {
                     });
                 }
                 Ok(lamps)
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Get the current error status of the device (ERST ?)
+    /// Returns a Result enum with an Ok being a [pjlink::ErrorStatus](struct.Lamp.html) example would be:
+    /// ```
+    /// match device.get_error_status() {
+    ///    Ok(error_status) => {
+    ///        match error_status.fan_error {
+    ///            ErrorType::Warning => println!("{} Error Status: Fan Warning", host),
+    ///            ErrorType::Error => println!("{} Error Status: Fan Error", host),
+    ///            _ => (),
+    ///        }
+    ///        match error_status.lamp_error {
+    ///            ErrorType::Warning => println!("{} Error Status: Lamp Warning", host),
+    ///            ErrorType::Error => println!("{} Error Status: Lamp Error", host),
+    ///            _ => (),
+    ///        }
+    ///        match error_status.temperature_error {
+    ///            ErrorType::Warning => println!("{} Error Status: Temperature Warning", host),
+    ///            ErrorType::Error => println!("{} Error Status: Temperature Error", host),
+    ///            _ => (),
+    ///        }
+    ///        match error_status.cover_open_error {
+    ///            ErrorType::Warning => println!("{} Error Status: Cover Open Warning", host),
+    ///            ErrorType::Error => println!("{} Error Status: Cover Open Error", host),
+    ///            _ => (),
+    ///        }
+    ///        match error_status.filter_error {
+    ///            ErrorType::Warning => println!("{} Error Status: Filter Warning", host),
+    ///            ErrorType::Error => println!("{} Error Status: Filter Error", host),
+    ///            _ => (),
+    ///        }
+    ///        match error_status.other_error {
+    ///            ErrorType::Warning => println!("{} Error Status: Other Warning", host),
+    ///            ErrorType::Error => println!("{} Error Status: Other Error", host),
+    ///            _ => (),
+    ///        }
+    ///    }
+    ///    Err(err) => println!("{} Error Status: error occurred: {}", host, err),
+    /// }
+    ///
+    /// ```
+    ///
+    pub fn get_error_status(&self) -> Result<ErrorStatus, Error> {
+        match self.send("ERST ?") {
+            Ok(result) => {
+                let mut status = result.value.chars();
+
+                Ok(ErrorStatus {
+                    fan_error: match status.next() {
+                        Some(e) => match e {
+                            '0' => ErrorType::NoError,
+                            '1' => ErrorType::Warning,
+                            '2' => ErrorType::Error,
+                            _ => ErrorType::NoError,
+                        },
+                        None => ErrorType::NoError,
+                    },
+                    lamp_error: match status.next() {
+                        Some(e) => match e {
+                            '0' => ErrorType::NoError,
+                            '1' => ErrorType::Warning,
+                            '2' => ErrorType::Error,
+                            _ => ErrorType::NoError,
+                        },
+                        None => ErrorType::NoError,
+                    },
+                    temperature_error: match status.next() {
+                        Some(e) => match e {
+                            '0' => ErrorType::NoError,
+                            '1' => ErrorType::Warning,
+                            '2' => ErrorType::Error,
+                            _ => ErrorType::NoError,
+                        },
+                        None => ErrorType::NoError,
+                    },
+                    cover_open_error: match status.next() {
+                        Some(e) => match e {
+                            '0' => ErrorType::NoError,
+                            '1' => ErrorType::Warning,
+                            '2' => ErrorType::Error,
+                            _ => ErrorType::NoError,
+                        },
+                        None => ErrorType::NoError,
+                    },
+                    filter_error: match status.next() {
+                        Some(e) => match e {
+                            '0' => ErrorType::NoError,
+                            '1' => ErrorType::Warning,
+                            '2' => ErrorType::Error,
+                            _ => ErrorType::NoError,
+                        },
+                        None => ErrorType::NoError,
+                    },
+                    other_error: match status.next() {
+                        Some(e) => match e {
+                            '0' => ErrorType::NoError,
+                            '1' => ErrorType::Warning,
+                            '2' => ErrorType::Error,
+                            _ => ErrorType::NoError,
+                        },
+                        None => ErrorType::NoError,
+                    },
+                })
             }
             Err(e) => Err(e),
         }
