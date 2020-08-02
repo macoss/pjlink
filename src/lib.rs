@@ -29,7 +29,7 @@ fn pjlink_error(error_msg: &str) -> Error {
         "ERR2" => Error::new(ErrorKind::InvalidData, "Invalid parameter".to_string()),
         "ERR3" => Error::new(
             ErrorKind::InvalidData,
-            "Unavaiable at this time".to_string(),
+            "Unavailable at this time".to_string(),
         ),
         "ERR4" => Error::new(
             ErrorKind::InvalidData,
